@@ -1,0 +1,54 @@
+Sub ExportToTextFile()
+    Dim filePath As String
+    Dim textData As String
+    Dim row As Long, col As Integer
+    Dim ws As Worksheet
+    Dim FSO As Object
+    Dim FileToCreate As Object
+ 
+    ' Define the file path where the text file will be saved
+    filePath = "C:\Users\JF\OneDrive\Documents\Textfile3.txt" ' Replace with your desired file path
+ 
+    ' Initialize textData variable
+    textData = ""
+ 
+    ' Set reference to the active sheet (you can change this if needed)
+    Set ws = ThisWorkbook.ActiveSheet
+ 
+    ' Debug: Check if the worksheet is correctly referenced
+    If ws Is Nothing Then
+        MsgBox "Worksheet not found!", vbCritical
+        Exit Sub
+    End If
+ 
+    ' Loop through each row and column in the worksheet's used range
+    With ws.UsedRange
+        For row = 1 To .Rows.Count
+            For col = 1 To .Columns.Count
+                ' Append data from each cell to the textData string
+                textData = textData & .Cells(row, col).Value & vbTab ' Use Tab as delimiter
+            Next col
+            ' Append new line after each row
+            textData = textData & vbCrLf
+        Next row
+    End With
+ 
+    ' Debug: Check if textData is being populated
+    If Len(textData) = 0 Then
+        MsgBox "No data found in the worksheet!", vbCritical
+        Exit Sub
+    End If
+ 
+    ' Create a new text file using FileSystemObject
+    Set FSO = CreateObject("Scripting.FileSystemObject")
+    Set FileToCreate = FSO.CreateTextFile(filePath, True) ' True for overwriting if file already exists
+ 
+    ' Write the entire textData to the text file
+    FileToCreate.Write textData
+ 
+    ' Close the text file
+    FileToCreate.Close
+ 
+    ' Inform the user that the export is complete
+    MsgBox "Data exported to " & filePath, vbInformation
+End Sub
