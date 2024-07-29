@@ -1,0 +1,90 @@
+Sub ExportReferenceDataToPDF()
+    Dim ws As Worksheet
+    Dim refCol As Range
+    Dim cell As Range
+    Dim refNumbers As Collection
+    Dim refNumber As Variant
+    Dim newWS As Worksheet
+    Dim pdfFileName As String
+    Dim lastRow As Long
+    Dim firstName As String
+    Dim referenceNumber As String
+    Dim folderPath As String
+    Dim tempRange As Range
+    Dim tbl As ListObject
+ 
+    ' Set the active worksheet
+    Set ws = ActiveSheet
+    ' Find the last row in the data
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    ' Set the range for the reference column
+    Set refCol = ws.Range("C2:C" & lastRow) ' Assuming the reference column is C
+    ' Initialize a collection to hold unique reference numbers
+    Set refNumbers = New Collection
+    ' Collect unique reference numbers
+    On Error Resume Next
+    For Each cell In refCol
+        refNumbers.Add cell.Value, CStr(cell.Value)
+    Next cell
+    On Error GoTo 0
+    ' Define the folder path to save PDFs
+    folderPath = ThisWorkbook.Path & "\PDFs"
+    ' Create the folder if it doesn't exist
+    If Dir(folderPath, vbDirectory) = "" Then
+        MkDir folderPath
+    End If
+    ' Loop through each unique reference number
+    For Each refNumber In refNumbers
+        ' Add a new worksheet
+        Set newWS = Worksheets.Add
+        newWS.Name = "Data_" & refNumber
+        ' Copy headers
+        ws.Rows(1).Copy Destination:=newWS.Rows(1)
+        ' Filter data based on reference number
+        ws.Rows(1).AutoFilter Field:=3, Criteria1:=refNumber ' Assuming the reference column is C
+        ' Copy filtered data to the new sheet
+        Set tempRange = ws.UsedRange.SpecialCells(xlCellTypeVisible)
+        tempRange.Copy Destination:=newWS.Cells(2, 1)
+        ' Remove AutoFilter
+        ws.AutoFilterMode = False
+        ' Format the new sheet
+        With newWS
+            ' Set font size for all cells
+            .Cells.Font.Size = 11 ' Adjust size as needed
+            ' Apply table formatting
+            Set tbl = .ListObjects.Add(xlSrcRange, .UsedRange, , xlYes)
+            tbl.TableStyle = "TableStyleMedium9" ' You can choose a different style if needed
+            ' Adjust column widths to fit content
+            .Columns.AutoFit
+            ' AutoFit row heights based on content
+            .Rows.AutoFit
+            ' Ensure header row is only displayed once
+            If .Rows(2).Hidden = False Then
+                .Rows(2).EntireRow.Delete
+            End If
+            ' Adjust page setup for better formatting in PDF
+            With .PageSetup
+                .Orientation = xlLandscape
+                .FitToPagesWide = 1
+                .FitToPagesTall = False
+                .Zoom = False
+                .CenterHorizontally = True
+                .CenterVertically = False
+                .PrintTitleRows = "$1:$1"
+            End With
+        End With
+        ' Determine the first name from the filtered data
+        firstName = newWS.Cells(2, 1).Value ' Assuming first name is in column A
+        ' Create PDF file name
+        referenceNumber = refNumber
+        pdfFileName = folderPath & "\" & firstName & "_" & referenceNumber & ".pdf"
+        ' Export the new worksheet to PDF
+        newWS.ExportAsFixedFormat Type:=xlTypePDF, Filename:=pdfFileName, Quality:=xlQualityStandard
+        ' Delete the temporary worksheet
+        Application.DisplayAlerts = False
+        newWS.Delete
+        Application.DisplayAlerts = True
+    Next refNumber
+    ' Inform the user that the task is complete
+    MsgBox "PDF files have been created successfully in the folder '" & folderPath & "'.", vbInformation
+End Sub
